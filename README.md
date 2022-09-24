@@ -1,4 +1,6 @@
 # goscheds
+[![codecov](https://codecov.io/gh/luqmansen/goscheds/branch/main/graph/badge.svg)](https://codecov.io/gh/luqmansen/go-caskdb)
+[![Actions Status](https://github.com/luqmansen/goscheds/actions/workflows/test.yml/badge.svg)](https://github.com/luqmansen/go-caskdb/actions/workflows/test.yml)
 
 Job Scheduler library for Go
 
