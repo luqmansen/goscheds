@@ -27,7 +27,7 @@ func TestRedisScheduler(t *testing.T) {
 
 	t.Run("isJobReadyToExecute", func(t *testing.T) {
 		j := ScheduledJob{
-			ExecuteAt: time.Now().Add(2 * time.Hour),
+			ExecuteAt: time.Now(),
 		}
 		assert.True(t, isJobReadyToExecute(j))
 
@@ -75,13 +75,13 @@ func TestRedisScheduler(t *testing.T) {
 		job := ScheduledJob{
 			JobName:   "test_func",
 			Id:        uuid.NewString(),
-			ExecuteAt: time.Now(),
+			ExecuteAt: time.Now().Add(1 * time.Hour),
 			Args:      map[string]interface{}{"test": 123},
 		}
 		job2 := ScheduledJob{
 			JobName:   "test_func",
 			Id:        uuid.NewString(),
-			ExecuteAt: time.Now().Add(1 * time.Hour), // the score for this member should be lower than prev job
+			ExecuteAt: time.Now().Add(2 * time.Hour), // the score for this member should be higher than prev job
 			Args:      map[string]interface{}{"test": 123},
 		}
 
@@ -89,7 +89,7 @@ func TestRedisScheduler(t *testing.T) {
 		assert.NoError(t, scheduler.PushScheduled(ctx, &job2))
 		res, err := scheduler.getTopList(ctx)
 		assert.NoError(t, err)
-
+		assert.NotNil(t, res)
 		assert.Equal(t, job.Id, res.Id)
 		client.FlushDB(ctx)
 	})

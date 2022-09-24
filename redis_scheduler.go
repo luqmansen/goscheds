@@ -151,10 +151,9 @@ func (r *RedisScheduler) StartScheduler(ctx context.Context) {
 	}
 }
 func isJobReadyToExecute(job ScheduledJob) bool {
-	y, m, d := job.ExecuteAt.Date()
-	nowY, nowM, nowD := time.Now().Date()
-	// ready to execute if the job's date is less than or equal current date
-	return y <= nowY && m <= nowM && d <= nowD
+	execute := job.ExecuteAt
+	now := time.Now()
+	return execute.Before(now) || execute.Equal(now)
 }
 
 func (r *RedisScheduler) getTopList(ctx context.Context) (*ScheduledJob, error) {

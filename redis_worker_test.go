@@ -21,14 +21,16 @@ func init() {
 
 func TestNewRedisWorker(t *testing.T) {
 
-	schedulerClient := initRedis()
-	workerClient := initRedis()
-	scheduler := NewRedisScheduler("test", schedulerClient)
-	worker := NewRedisWorker("test", workerClient)
-	ctx := context.Background()
-	schedulerClient.FlushDB(ctx)
-
 	t.Run("execute scheduled task", func(t *testing.T) {
+
+		schedulerClient := initRedis()
+		workerClient := initRedis()
+		namespace := uuid.NewString()
+		scheduler := NewRedisScheduler(namespace, schedulerClient)
+		worker := NewRedisWorker(namespace, workerClient)
+		ctx := context.Background()
+		schedulerClient.FlushDB(ctx)
+
 		queueName := "test_func"
 
 		jobPayload := &ScheduledJob{
@@ -38,45 +40,54 @@ func TestNewRedisWorker(t *testing.T) {
 			Args:      map[string]interface{}{"test": uuid.NewString()},
 		}
 
-		executed := false
+		executed := make(chan bool, 1)
 		worker.RegisterHandler(queueName, func(job *ScheduledJob) error {
-			assert.Equal(t, jobPayload.Id, job.Id)
-			executed = true
+			executed <- true
 			return nil
 		})
 
 		worker.ProcessJob(ctx)
 		assert.NoError(t, scheduler.PushScheduled(ctx, jobPayload))
 		time.Sleep(time.Second)
-		assert.True(t, executed)
+		assert.True(t, <-executed)
 
 	})
 
 	t.Run("failed job retried", func(t *testing.T) {
+
+		schedulerClient := initRedis()
+		workerClient := initRedis()
+		namespace := uuid.NewString()
+		scheduler := NewRedisScheduler(namespace, schedulerClient)
+		worker := NewRedisWorker(namespace, workerClient)
+		ctx := context.Background()
+		schedulerClient.FlushDB(ctx)
+
 		queueName := "test_func"
 
 		jobPayload := &ScheduledJob{
 			JobName:   queueName,
 			Id:        uuid.NewString(),
 			ExecuteAt: time.Now(),
-			Args:      map[string]interface{}{"test": uuid.NewString()},
+			Args:      map[string]interface{}{},
 		}
 
-		count := 0
-		executed := false
+		executed := make(chan bool, 1)
+		counter := 0
+
 		worker.RegisterHandler(queueName, func(job *ScheduledJob) error {
 			assert.Equal(t, jobPayload.Id, job.Id)
-			if count != 2 {
-				count += 1
+			if counter != 2 {
+				counter += 1
 				return fmt.Errorf("some error")
 			}
-			executed = true
+			executed <- true
 			return nil
 		})
 
 		worker.ProcessJob(ctx)
 		assert.NoError(t, scheduler.PushScheduled(ctx, jobPayload))
 		time.Sleep(1 * time.Second)
-		assert.True(t, executed)
+		assert.True(t, <-executed)
 	})
 }
