@@ -74,7 +74,7 @@ func (r *RedisWorker) processJobForQueue(ctx context.Context, queueName string) 
 			continue
 		}
 
-		var job *ScheduledJob
+		var job *Job
 		_ = json.Unmarshal([]byte(res[1]), &job)
 
 		log.Debugf("processing %s args %s", queueName, job.Args)
@@ -107,7 +107,7 @@ func (r *RedisWorker) processJobForQueue(ctx context.Context, queueName string) 
 	}
 }
 
-func (r *RedisWorker) addItemToOnProgressQueue(ctx context.Context, job *ScheduledJob) error {
+func (r *RedisWorker) addItemToOnProgressQueue(ctx context.Context, job *Job) error {
 	log.Debugf("addItemToOnProgressQueue %s args %s", job.JobName, job.Args)
 
 	key := fmt.Sprintf("%s:%s:%s", r.namespace, job.JobName, onProgressSuffixKey)
@@ -117,7 +117,7 @@ func (r *RedisWorker) addItemToOnProgressQueue(ctx context.Context, job *Schedul
 	return backoff.Retry(r.client.RPush(ctx, key, val).Err, backoff.NewConstantBackOff(time.Millisecond))
 }
 
-func (r *RedisWorker) requeueFailedJob(ctx context.Context, job *ScheduledJob) error {
+func (r *RedisWorker) requeueFailedJob(ctx context.Context, job *Job) error {
 	log.Debugf("requeue failed job %s args %s", job.JobName, job.Args)
 	// ignore the error, bcs this must be a valid struct
 	val, _ := job.marshal()
@@ -137,7 +137,7 @@ func (r *RedisWorker) requeueFailedJob(ctx context.Context, job *ScheduledJob) e
 	return backoff.Retry(ops, backoff.NewConstantBackOff(time.Millisecond))
 }
 
-func (r *RedisWorker) deleteItemFromOnProgressQueue(ctx context.Context, job *ScheduledJob) error {
+func (r *RedisWorker) deleteItemFromOnProgressQueue(ctx context.Context, job *Job) error {
 	log.Debugf("deleteItemFromOnProgressQueue %s args %s", job.JobName, job.Args)
 
 	onProgressKey := fmt.Sprintf("%s:%s:%s", r.namespace, job.JobName, onProgressSuffixKey)

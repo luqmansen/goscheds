@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"sync"
 	"time"
 
@@ -41,13 +42,16 @@ const (
 )
 
 //Push will push a job right away to work queue, ExecuteAt field will be ignored
-func (r *RedisScheduler) Push(ctx context.Context, job *ScheduledJob) error {
+func (r *RedisScheduler) Push(ctx context.Context, job *Job) error {
+	job.id = uuid.NewString()
+
 	return r.addItemToWorkQueue(ctx, job)
 }
 
 //PushScheduled will push job to a queue. A handler for pushed must
 //be registered before pushing job to the queue
-func (r *RedisScheduler) PushScheduled(ctx context.Context, job *ScheduledJob) error {
+func (r *RedisScheduler) PushScheduled(ctx context.Context, job *Job) error {
+	job.id = uuid.NewString()
 
 	log.Debugf("pushing job %s args %s", job.JobName, job.Args)
 
@@ -120,9 +124,6 @@ func (r *RedisScheduler) StartScheduler(ctx context.Context) {
 			continue
 		}
 
-		//log.Debugf("scheduling job %s args %s", res.JobName, res)
-		//debugStruct(res)
-
 		// check if the task date is match the current date
 		if isJobReadyToExecute(*res) {
 			if err := r.deleteFromList(ctx, res); err != nil {
@@ -150,14 +151,15 @@ func (r *RedisScheduler) StartScheduler(ctx context.Context) {
 		locker.Release(ctx)
 	}
 }
-func isJobReadyToExecute(job ScheduledJob) bool {
+func isJobReadyToExecute(job Job) bool {
 	execute := job.ExecuteAt
 	now := time.Now()
 	return execute.Before(now) || execute.Equal(now)
 }
 
-func (r *RedisScheduler) getTopList(ctx context.Context) (*ScheduledJob, error) {
+func (r *RedisScheduler) getTopList(ctx context.Context) (*Job, error) {
 	key := fmt.Sprintf("%s:%s", r.namespace, scheduledKeyName)
+
 	res, err := r.client.ZRange(ctx, key, 0, 0).Result()
 	if err != nil {
 		return nil, err
@@ -167,7 +169,7 @@ func (r *RedisScheduler) getTopList(ctx context.Context) (*ScheduledJob, error) 
 		return nil, nil
 	}
 
-	var job *ScheduledJob
+	var job *Job
 	err = json.Unmarshal([]byte(res[0]), &job)
 	if err != nil {
 		return nil, err
@@ -176,7 +178,7 @@ func (r *RedisScheduler) getTopList(ctx context.Context) (*ScheduledJob, error) 
 	return job, nil
 }
 
-func (r *RedisScheduler) deleteFromList(ctx context.Context, job *ScheduledJob) error {
+func (r *RedisScheduler) deleteFromList(ctx context.Context, job *Job) error {
 	key := fmt.Sprintf("%s:%s", r.namespace, scheduledKeyName)
 	// ignore the error, bcs this must be a valid struct
 	jobB, _ := job.marshal()
@@ -184,8 +186,9 @@ func (r *RedisScheduler) deleteFromList(ctx context.Context, job *ScheduledJob) 
 	return r.client.ZRem(ctx, key, jobB).Err()
 }
 
-func (r *RedisScheduler) addItemToWorkQueue(ctx context.Context, job *ScheduledJob) error {
+func (r *RedisScheduler) addItemToWorkQueue(ctx context.Context, job *Job) error {
 	key := fmt.Sprintf("%s:%s", r.namespace, job.JobName)
+
 	// ignore the error, bcs this must be a valid struct
 	val, _ := job.marshal()
 

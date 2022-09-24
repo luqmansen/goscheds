@@ -33,15 +33,14 @@ func TestNewRedisWorker(t *testing.T) {
 
 		queueName := "test_func"
 
-		jobPayload := &ScheduledJob{
+		jobPayload := &Job{
 			JobName:   queueName,
-			Id:        uuid.NewString(),
 			ExecuteAt: time.Now(),
 			Args:      map[string]interface{}{"test": uuid.NewString()},
 		}
 
 		executed := make(chan bool, 1)
-		worker.RegisterHandler(queueName, func(job *ScheduledJob) error {
+		worker.RegisterHandler(queueName, func(job *Job) error {
 			executed <- true
 			return nil
 		})
@@ -65,9 +64,8 @@ func TestNewRedisWorker(t *testing.T) {
 
 		queueName := "test_func"
 
-		jobPayload := &ScheduledJob{
+		jobPayload := &Job{
 			JobName:   queueName,
-			Id:        uuid.NewString(),
 			ExecuteAt: time.Now(),
 			Args:      map[string]interface{}{},
 		}
@@ -75,8 +73,7 @@ func TestNewRedisWorker(t *testing.T) {
 		executed := make(chan bool, 1)
 		counter := 0
 
-		worker.RegisterHandler(queueName, func(job *ScheduledJob) error {
-			assert.Equal(t, jobPayload.Id, job.Id)
+		worker.RegisterHandler(queueName, func(job *Job) error {
 			if counter != 2 {
 				counter += 1
 				return fmt.Errorf("some error")

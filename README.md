@@ -45,9 +45,8 @@ func main() {
 	// it will be blocking, should run on goroutine
 	go scheduler.StartScheduler(ctx)
 
-	job := &goscheds.ScheduledJob{
+	job := &goscheds.Job{
 		JobName: job_name,
-		Id:      "1234",
 		ExecuteAt: time.Now().Add(24 * time.Hour), 
 		Args: map[string]interface{}{
 			"args": "can be anything",
