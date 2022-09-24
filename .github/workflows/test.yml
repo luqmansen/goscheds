@@ -21,6 +21,9 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          # Maps port 6379 on service container to the host
+          - 6379:6379
 
     steps:
       - uses: actions/checkout@master
@@ -38,7 +41,7 @@ jobs:
           go tool cover -func coverage.out
 
         env:
-          REDIS_HOST: redis
+          REDIS_HOST: localhost
           REDIS_PORT: 6379
 
       - name: Upload coverage report
