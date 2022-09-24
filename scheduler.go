@@ -8,7 +8,7 @@ import (
 
 type Job struct {
 	JobName string
-	id      string
+	Id      string
 	//StartedAt is time when the job is started
 	StartedAt time.Time
 	//Timeout is how long a job should be waited if it is hanging on on_progress queue
@@ -19,6 +19,12 @@ type Job struct {
 
 func (j *Job) marshal() ([]byte, error) {
 	return json.Marshal(j)
+}
+
+func (j *Job) isReadyToExecute() bool {
+	execute := j.ExecuteAt
+	now := time.Now()
+	return execute.Before(now) || execute.Equal(now)
 }
 
 type HandlerFunc func(job *Job) error

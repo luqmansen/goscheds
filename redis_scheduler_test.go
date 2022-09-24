@@ -29,12 +29,12 @@ func TestRedisScheduler(t *testing.T) {
 		j := Job{
 			ExecuteAt: time.Now(),
 		}
-		assert.True(t, isJobReadyToExecute(j))
+		assert.True(t, j.isReadyToExecute())
 
 		j = Job{
 			ExecuteAt: time.Now().Add(200 * time.Hour),
 		}
-		assert.False(t, isJobReadyToExecute(j))
+		assert.False(t, j.isReadyToExecute())
 	})
 
 	t.Run("success push job for next day", func(t *testing.T) {
@@ -47,7 +47,7 @@ func TestRedisScheduler(t *testing.T) {
 		res, err := scheduler.getTopList(ctx)
 		assert.NoError(t, err)
 
-		assert.False(t, isJobReadyToExecute(*res))
+		assert.False(t, res.isReadyToExecute())
 
 		client.FlushDB(ctx)
 	})
@@ -70,25 +70,25 @@ func TestRedisScheduler(t *testing.T) {
 
 	t.Run("get top of the list item exists", func(t *testing.T) {
 
-		job := Job{
+		job := &Job{
 			JobName:   "test_func",
-			id:        uuid.NewString(),
 			ExecuteAt: time.Now().Add(1 * time.Hour),
 			Args:      map[string]interface{}{"test": 123},
 		}
-		job2 := Job{
+		job2 := &Job{
 			JobName:   "test_func",
-			id:        uuid.NewString(),
 			ExecuteAt: time.Now().Add(2 * time.Hour), // the score for this member should be higher than prev job
 			Args:      map[string]interface{}{"test": 123},
 		}
 
-		assert.NoError(t, scheduler.PushScheduled(ctx, &job))
-		assert.NoError(t, scheduler.PushScheduled(ctx, &job2))
+		assert.NoError(t, scheduler.PushScheduled(ctx, job))
+		assert.NoError(t, scheduler.PushScheduled(ctx, job2))
 		res, err := scheduler.getTopList(ctx)
+
 		assert.NoError(t, err)
 		assert.NotNil(t, res)
-		assert.Equal(t, job.id, res.id)
+
+		assert.Equal(t, job.Id, res.Id)
 		client.FlushDB(ctx)
 	})
 

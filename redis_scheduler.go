@@ -43,7 +43,7 @@ const (
 
 //Push will push a job right away to work queue, ExecuteAt field will be ignored
 func (r *RedisScheduler) Push(ctx context.Context, job *Job) error {
-	job.id = uuid.NewString()
+	job.Id = uuid.NewString()
 
 	return r.addItemToWorkQueue(ctx, job)
 }
@@ -51,7 +51,7 @@ func (r *RedisScheduler) Push(ctx context.Context, job *Job) error {
 //PushScheduled will push job to a queue. A handler for pushed must
 //be registered before pushing job to the queue
 func (r *RedisScheduler) PushScheduled(ctx context.Context, job *Job) error {
-	job.id = uuid.NewString()
+	job.Id = uuid.NewString()
 
 	log.Debugf("pushing job %s args %s", job.JobName, job.Args)
 
@@ -61,7 +61,7 @@ func (r *RedisScheduler) PushScheduled(ctx context.Context, job *Job) error {
 		return err
 	}
 
-	if isJobReadyToExecute(*job) {
+	if job.isReadyToExecute() {
 		lockKey := fmt.Sprintf("%s:LOCK:%s", r.namespace, scheduledKeyName)
 		locker, err := r.locker.Obtain(ctx, lockKey, 100*time.Millisecond, nil)
 		if err != nil {
@@ -125,7 +125,7 @@ func (r *RedisScheduler) StartScheduler(ctx context.Context) {
 		}
 
 		// check if the task date is match the current date
-		if isJobReadyToExecute(*res) {
+		if res.isReadyToExecute() {
 			if err := r.deleteFromList(ctx, res); err != nil {
 				locker.Release(ctx)
 				log.Error(err)
@@ -150,11 +150,6 @@ func (r *RedisScheduler) StartScheduler(ctx context.Context) {
 
 		locker.Release(ctx)
 	}
-}
-func isJobReadyToExecute(job Job) bool {
-	execute := job.ExecuteAt
-	now := time.Now()
-	return execute.Before(now) || execute.Equal(now)
 }
 
 func (r *RedisScheduler) getTopList(ctx context.Context) (*Job, error) {

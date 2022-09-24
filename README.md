@@ -70,8 +70,9 @@ func main() {
 
 	worker.ProcessJob(ctx)
 }
-
 ```
+
+Other example available on [example](./example) folder
 
 ## How It Works
 ### Redis
